@@ -1,0 +1,52 @@
+---
+title: "Albumin Usage in HVI ICUs"
+subtitle: "Exploratory Data Analysis"
+author: "Brian Gulbis"
+date: "October 13, 2017"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+    html_document:
+        code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(edwr)
+library(DT)
+
+dir_raw <- "../data/raw"
+
+hvi_pts <- read_data(dir_raw, "location", FALSE) %>%
+    as.locations() %>%
+    filter(unit.name %in% c("HH CCU", "HH CVICU", "HH HFIC")) %>%
+    distinct(millennium.id, unit.name)
+
+unit_num <- hvi_pts %>%
+    count(unit.name) %>%
+    rename(pts_n = n)
+
+meds <- read_data(dir_raw, "meds-inpt", FALSE) %>%
+    as.meds_inpt()
+
+albumin <- meds %>%
+    filter(med == "albumin human")
+```
+
+```{r}
+albumin %>%
+    distinct(millennium.id, med.location) %>%
+    count(med.location) %>%
+    inner_join(unit_num, by = c("med.location" = "unit.name")) %>%
+    mutate(pct = n / pts_n) %>%
+    select(-pts_n) %>%
+    datatable(caption = "Number of patients receiving albumin by ICU",
+              rownames = FALSE,
+              colnames = c("Location", "N", "%"),
+              options = list(dom = "t")) %>%
+    formatPercentage("pct", 1)
+```
+
