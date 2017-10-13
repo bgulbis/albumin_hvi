@@ -27,3 +27,9 @@ mbo_hvi <- concat_encounters(hvi_pts$millennium.id)
 
 # run MBO query
 #   * Medications - Inpatient - All
+
+# meds <- read_data(dir_raw, "meds-inpt", FALSE) %>%
+#     as.meds_inpt()
+#
+# albumin <- meds %>%
+#     filter(med == "albumin human")
