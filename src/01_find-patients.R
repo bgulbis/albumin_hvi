@@ -15,3 +15,15 @@ mbo_id <- concat_encounters(patients$millennium.id)
 
 # run MBO query
 #   * Location History
+
+locations <- read_data(dir_raw, "location", FALSE) %>%
+    as.locations()
+
+hvi_pts <- locations %>%
+    filter(unit.name %in% c("HH CCU", "HH CVICU", "HH HFIC")) %>%
+    distinct(millennium.id)
+
+mbo_hvi <- concat_encounters(hvi_pts$millennium.id)
+
+# run MBO query
+#   * Medications - Inpatient - All
