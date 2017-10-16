@@ -1,0 +1,67 @@
+---
+title: "Albumin usage in HVI ICUs"
+author: "Brian Gulbis"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(edwr)
+
+dir_raw <- "../data/raw"
+hvi_icu <- c("HH CCU", "HH CVICU", "HH HFIC")
+
+hvi_pts <- read_data(dir_raw, "location", FALSE) %>%
+    as.locations() %>%
+    filter(unit.name %in% hvi_icu) %>%
+    distinct(millennium.id, unit.name)
+
+unit_num <- hvi_pts %>%
+    count(unit.name) %>%
+    rename(pts_n = n)
+
+meds <- read_data(dir_raw, "meds-inpt", FALSE) %>%
+    as.meds_inpt()
+
+albumin <- meds %>%
+    filter(med == "albumin human")
+
+# x <- distinct(albumin, med.location)
+```
+
+```{r}
+albumin %>%
+    distinct(millennium.id, med.location) %>%
+    count(med.location) %>%
+    inner_join(unit_num, by = c("med.location" = "unit.name")) %>%
+    mutate(pct = n / pts_n * 100) %>%
+    select(-pts_n) %>%
+    rename(Location = med.location, N = n, `%` = pct) %>%
+    knitr::kable(caption = "Number of patients receiving albumin by ICU", digits = 1)
+```
+
+```{r}
+albumin_n <- albumin %>%
+    filter(med.location %in% hvi_icu) %>%
+    distinct(event.id, med.location) %>%
+    count() %>%
+    rename(total_n = n)
+
+albumin %>%
+    filter(med.location %in% hvi_icu) %>%
+    distinct(event.id, med.location) %>%
+    count(med.location) %>%
+    mutate(total_n = albumin_n$total_n) %>%
+    # inner_join(unit_num, by = c("med.location" = "unit.name")) %>%
+    mutate(pct = n / total_n * 100) %>%
+    select(-total_n) %>%
+    rename(Location = med.location, N = n, `%` = pct) %>%
+    knitr::kable(caption = "Number of doses of albumin given in each ICU", digits = 1)
+```
+
+
