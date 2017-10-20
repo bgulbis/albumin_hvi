@@ -28,8 +28,17 @@ mbo_hvi <- concat_encounters(hvi_pts$millennium.id)
 # run MBO query
 #   * Medications - Inpatient - All
 
-# meds <- read_data(dir_raw, "meds-inpt", FALSE) %>%
-#     as.meds_inpt()
-#
-# albumin <- meds %>%
-#     filter(med == "albumin human")
+meds <- read_data(dir_raw, "meds-inpt", FALSE) %>%
+    as.meds_inpt()
+
+albumin <- meds %>%
+    filter(med == "albumin human") %>%
+    mutate(order_id = order.parent.id) %>%
+    mutate_at("order_id", funs(na_if(., 0L))) %>%
+    mutate_at("order_id", funs(coalesce(., order.id)))
+
+mbo_order <- concat_encounters(albumin$order_id)
+
+# run MBO query
+#   * Orders - Actions - by Order Id
+#   * Orders Meds - Details - by Order Id
