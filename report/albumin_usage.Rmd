@@ -11,7 +11,10 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 
 ```{r}
 library(tidyverse)
+library(forcats)
+library(lubridate)
 library(edwr)
+library(themebg)
 
 dir_raw <- "../data/raw"
 hvi_icu <- c("HH CCU", "HH CVICU", "HH HFIC")
@@ -30,6 +33,16 @@ meds <- read_data(dir_raw, "meds-inpt", FALSE) %>%
 
 albumin <- meds %>%
     filter(med == "albumin human")
+
+actions <- read_data(dir_raw, "orders-actions", FALSE) %>%
+    as.order_action() %>%
+    filter(action.type == "Order")
+
+details <- read_data(dir_raw, "orders-details", FALSE) %>%
+    as.order_detail()
+
+orders <- actions %>%
+    full_join(details, by = c("millennium.id", "order.id", "order"))
 
 # x <- distinct(albumin, med.location)
 ```
@@ -64,4 +77,51 @@ albumin %>%
     knitr::kable(caption = "Number of doses of albumin given in each ICU", digits = 1)
 ```
 
+```{r, fig.cap="Top provider types ordering albumin in HVI ICUs", out.height="4in"}
+orders %>%
+    filter(order.location %in% hvi_icu) %>%
+    mutate_at("order.provider.position", funs(coalesce(., action.provider.role))) %>%
+    count(order.location, order.provider.position) %>%
+    arrange(desc(n)) %>%
+    mutate_at("order.provider.position", as_factor) %>%
+    mutate_at("order.provider.position", fct_lump, n = 10) %>%
+    mutate_at("order.provider.position", fct_rev) %>%
+    ggplot(aes(x = order.provider.position, y = n)) +
+    geom_bar(stat = "identity") +
+    xlab(NULL) +
+    ylab("Number of Orders") +
+    facet_wrap(~ order.location) +
+    coord_flip() +
+    theme_bg()
+```
+
+```{r, fig.cap="Order communication type", out.height="4in"}
+orders %>%
+    filter(order.location %in% hvi_icu) %>%
+    count(order.location, action.comm) %>%
+    arrange(desc(n)) %>%
+    mutate_at("action.comm", as_factor) %>%
+    mutate_at("action.comm", fct_rev) %>%
+    ggplot(aes(x = action.comm, y = n)) +
+    geom_bar(stat = "identity") +
+    xlab(NULL) +
+    ylab("Number of Orders") +
+    facet_wrap(~ order.location) +
+    coord_flip() +
+    theme_bg()
+
+```
+
+```{r, fig.cap="Number of orders by time of day", fig.height=6}
+orders %>%
+    filter(order.location %in% hvi_icu) %>%
+    mutate_at("order.datetime", funs(coalesce(., action.datetime))) %>%
+    mutate(hour = hour(order.datetime)) %>%
+    ggplot(aes(x = hour)) +
+    geom_bar() +
+    facet_wrap(~ order.location, ncol = 1, scales = "free_y") +
+    scale_x_continuous(NULL, breaks = seq(0, 24, 6)) +
+    ylab("Number of Orders") +
+    theme_bg()
+```
 
