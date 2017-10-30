@@ -125,3 +125,28 @@ orders %>%
     theme_bg()
 ```
 
+```{r, fig.cap="Top providers ordering albumin in each HVI ICU by order type", fig.height=8}
+lvl <- orders %>%
+    filter(order.location %in% hvi_icu) %>%
+    mutate_at("order.provider", funs(coalesce(., action.provider))) %>%
+    count(order.provider, sort = TRUE)
+
+orders %>%
+    filter(order.location %in% hvi_icu) %>%
+    mutate_at("order.provider", funs(coalesce(., action.provider))) %>%
+    count(order.location, action.comm, order.provider) %>%
+    arrange(desc(n)) %>%
+    filter(n > 2) %>%
+    mutate_at("order.provider", factor, levels = lvl$order.provider) %>%
+    # mutate_at("order.provider", fct_lump, n = 10) %>%
+    mutate_at("order.provider", fct_rev) %>%
+    ggplot(aes(x = order.provider, y = n, fill = action.comm)) +
+    geom_bar(stat = "identity") +
+    xlab(NULL) +
+    ylab("Number of Orders") +
+    scale_fill_discrete("Order Type") +
+    facet_wrap(~ order.location, ncol = 1, scales = "free_y") +
+    coord_flip() +
+    theme_bg() + 
+    theme(legend.position = "bottom", legend.title = element_text(color = "grey35"))
+```
